@@ -285,18 +285,37 @@ class IsoDiM(nn.Module):
     
     def snap_to_fsq_grid(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Snap continuous predictions to FSQ grid points.
+        Snap continuous predictions to FSQ grid points (without tanh compression).
         
-        This is the key operation for inference: ensure outputs lie on
-        the valid FSQ grid for proper decoding.
+        IMPORTANT: The diffusion model output is already trained to predict values
+        in the FSQ quantized space [-1, 1]. We should NOT apply tanh again!
+        
+        This method directly scales -> rounds -> rescales, preserving the values
+        that the diffusion model learned to predict.
         
         Args:
-            x: Continuous predictions [B, L, d] or [B, d]
+            x: Continuous predictions [B, L, d] or [B, d], already in [-1, 1] range
             
         Returns:
-            Grid-snapped predictions
+            Grid-snapped predictions on valid FSQ grid points
         """
-        return self.fsq(x)
+        # Get half_levels for each FSQ dimension: (levels - 1) / 2
+        # e.g., for levels=[8,8,8,5,5,5], half_levels=[3.5, 3.5, 3.5, 2, 2, 2]
+        half_levels = (self.fsq._levels_tensor - 1) / 2  # [d]
+        
+        # Scale from [-1, 1] to [-half_levels, half_levels]
+        z_scaled = x * half_levels
+        
+        # Round to nearest integer grid point
+        z_quantized = torch.round(z_scaled)
+        
+        # Clamp to valid range (safety measure)
+        z_quantized = torch.clamp(z_quantized, -half_levels, half_levels)
+        
+        # Scale back to [-1, 1]
+        z_snapped = z_quantized / half_levels
+        
+        return z_snapped
     
     def forward_with_CFG(
         self,

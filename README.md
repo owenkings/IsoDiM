@@ -87,11 +87,16 @@ python evaluation_IsoDiM.py \
 
 ### Tokenizer Models
 
-| Model | FSQ Levels | Codebook Size | Recommended |
-|-------|-----------|---------------|-------------|
-| `IsoDiM_Tokenizer_Large` | [8,8,6,5,5,5] | 48,000 | |
-| `IsoDiM_Tokenizer_High` | [8,8,8,5,5,5] | 64,000 | ✅ |
-| `IsoDiM_Tokenizer_Ultra` | [8,8,8,8,5,5] | 102,400 | |
+| Model | FSQ Levels | Codebook Size | Dim | Use Case |
+|-------|------------|---------------|-----|----------|
+| `IsoDiM_Tokenizer_Small` | [5,5,5,5,5] | 3,125 | 5 | 🧪 快速测试 |
+| `IsoDiM_Tokenizer_Medium` | [8,5,5,5,5] | 5,000 | 5 | 轻量实验 |
+| `IsoDiM_Tokenizer_Large` | [8,6,6,5,5,5] | 36,000 | 6 | 常规训练 |
+| `IsoDiM_Tokenizer_High` | [8,8,8,5,5,5] | 64,000 | 6 | ✅ **推荐** |
+| `IsoDiM_Tokenizer_Ultra` | [8,8,8,8,5,5] | 102,400 | 6 | 高精度 |
+| `IsoDiM_Tokenizer_Mega` | [8,8,8,8,8,5] | 163,840 | 6 | 超高精度 |
+| `IsoDiM_Tokenizer_HighDim7` | [7,5,5,5,5,5,5] | 109,375 | 7 | 高维实验 |
+| `IsoDiM_Tokenizer_HighDim8` | [5,5,5,5,5,5,5,5] | 390,625 | 8 | 高维实验 |
 
 ### IsoDiM Models
 

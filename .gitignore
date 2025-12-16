@@ -28,6 +28,8 @@ MANIFEST
 CLIP/
 Clip/
 scripts/
+doc/
+glove/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -150,4 +152,7 @@ __pycache__/
 *.ipynb_checkpoints/
 .vscode/
 .idea/
-*.log
+*.logdatasets
+datasets
+glove
+train_all.sh

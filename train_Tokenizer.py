@@ -5,6 +5,7 @@ Train the FSQ-based motion tokenizer.
 
 Usage:
     python train_Tokenizer.py --name IsoDiM_Tokenizer_High --model IsoDiM_Tokenizer_High --dataset_name t2m
+    python train_Tokenizer.py --name IsoDiM_Tokenizer_Small --model IsoDiM_Tokenizer_Small --gpu 0
 
 Recommended Configuration:
     - Model: IsoDiM_Tokenizer_High (64k codebook)
@@ -13,6 +14,18 @@ Recommended Configuration:
 """
 
 import os
+import sys
+import argparse
+
+# Parse --gpu argument early to set CUDA_VISIBLE_DEVICES before torch import
+def parse_gpu_arg():
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--gpu", type=int, default=0)
+    args, _ = parser.parse_known_args()
+    return args.gpu
+
+os.environ["CUDA_VISIBLE_DEVICES"] = str(parse_gpu_arg())
+
 from os.path import join as pjoin
 import torch
 import numpy as np
@@ -20,7 +33,6 @@ import random
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import torch.optim as optim
-import argparse
 import time
 from collections import OrderedDict, defaultdict
 
@@ -252,7 +264,16 @@ if __name__ == "__main__":
     parser.add_argument('--name', type=str, default='IsoDiM_Tokenizer_High',
                         help='Experiment name')
     parser.add_argument('--model', type=str, default='IsoDiM_Tokenizer_High',
-                        choices=['IsoDiM_Tokenizer_High', 'IsoDiM_Tokenizer_Ultra', 'IsoDiM_Tokenizer_Large'],
+                        choices=[
+                            'IsoDiM_Tokenizer_Small',    # 3,125 codes (快速测试)
+                            'IsoDiM_Tokenizer_Medium',   # 5,000 codes
+                            'IsoDiM_Tokenizer_Large',    # 36,000 codes
+                            'IsoDiM_Tokenizer_High',     # 64,000 codes (推荐)
+                            'IsoDiM_Tokenizer_Ultra',    # 102,400 codes
+                            'IsoDiM_Tokenizer_Mega',     # 163,840 codes
+                            'IsoDiM_Tokenizer_HighDim7', # 109,375 codes, dim=7
+                            'IsoDiM_Tokenizer_HighDim8', # 390,625 codes, dim=8
+                        ],
                         help='Tokenizer model variant')
     
     # Data configuration
@@ -277,6 +298,8 @@ if __name__ == "__main__":
                         choices=['l1_smooth', 'mse'])
     
     # System configuration
+    parser.add_argument("--gpu", type=int, default=0,
+                        help='GPU device ID to use')
     parser.add_argument("--seed", type=int, default=3407)
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument('--is_continue', action="store_true")

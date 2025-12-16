@@ -169,14 +169,21 @@ class FSQ(nn.Module):
 # ============================================================================
 
 FSQ_CONFIGS = {
-    # Format: (levels, approx_codebook_size, dim)
-    'small': [8, 5, 5, 5, 5],           # 5,000 codes, dim=5
-    'medium': [8, 6, 6, 5, 5, 5],       # 21,600 codes, dim=6
-    'large': [8, 8, 6, 5, 5, 5],        # 48,000 codes, dim=6
-    'high': [8, 8, 8, 5, 5, 5],         # 64,000 codes, dim=6 (RECOMMENDED)
-    'ultra': [8, 8, 8, 8, 5, 5],        # 102,400 codes, dim=6
-    'mega': [8, 8, 8, 8, 8, 5],         # 163,840 codes, dim=6
-    'highdim7': [7, 5, 5, 5, 5, 5, 5],  # 109,375 codes, dim=7
+    # Format: name -> [levels], codebook_size = prod(levels)
+    # -------------------------------------------------------------------------
+    # Standard configurations (dim=5 or dim=6)
+    # -------------------------------------------------------------------------
+    'small': [5, 5, 5, 5, 5],              # 3,125 codes, dim=5 (快速测试用)
+    'medium': [8, 5, 5, 5, 5],             # 5,000 codes, dim=5
+    'large': [8, 6, 6, 5, 5, 5],           # 36,000 codes, dim=6
+    'high': [8, 8, 8, 5, 5, 5],            # 64,000 codes, dim=6 (RECOMMENDED)
+    'ultra': [8, 8, 8, 8, 5, 5],           # 102,400 codes, dim=6
+    'mega': [8, 8, 8, 8, 8, 5],            # 163,840 codes, dim=6
+    
+    # -------------------------------------------------------------------------
+    # High-dimensional configurations (dim=7 or dim=8)
+    # -------------------------------------------------------------------------
+    'highdim7': [7, 5, 5, 5, 5, 5, 5],     # 109,375 codes, dim=7
     'highdim8': [5, 5, 5, 5, 5, 5, 5, 5],  # 390,625 codes, dim=8
 }
 

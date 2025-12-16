@@ -360,6 +360,36 @@ class ResConv1DBlock(nn.Module):
 # Model Factory Functions
 # ============================================================================
 
+def isodim_tokenizer_small(**kwargs) -> IsoDiM_Tokenizer:
+    """Create IsoDiM_Tokenizer with FSQ-Small configuration (3k codebook)."""
+    return IsoDiM_Tokenizer(
+        output_emb_width=512, down_t=2, stride_t=2, width=512, depth=3,
+        dilation_growth_rate=3, activation='relu', norm=None,
+        fsq_levels=get_fsq_config('small'),  # [5, 5, 5, 5, 5]
+        **kwargs
+    )
+
+
+def isodim_tokenizer_medium(**kwargs) -> IsoDiM_Tokenizer:
+    """Create IsoDiM_Tokenizer with FSQ-Medium configuration (5k codebook)."""
+    return IsoDiM_Tokenizer(
+        output_emb_width=512, down_t=2, stride_t=2, width=512, depth=3,
+        dilation_growth_rate=3, activation='relu', norm=None,
+        fsq_levels=get_fsq_config('medium'),  # [8, 5, 5, 5, 5]
+        **kwargs
+    )
+
+
+def isodim_tokenizer_large(**kwargs) -> IsoDiM_Tokenizer:
+    """Create IsoDiM_Tokenizer with FSQ-Large configuration (36k codebook)."""
+    return IsoDiM_Tokenizer(
+        output_emb_width=512, down_t=2, stride_t=2, width=512, depth=3,
+        dilation_growth_rate=3, activation='relu', norm=None,
+        fsq_levels=get_fsq_config('large'),  # [8, 6, 6, 5, 5, 5]
+        **kwargs
+    )
+
+
 def isodim_tokenizer_high(**kwargs) -> IsoDiM_Tokenizer:
     """Create IsoDiM_Tokenizer with FSQ-High configuration (64k codebook) - RECOMMENDED."""
     return IsoDiM_Tokenizer(
@@ -375,25 +405,52 @@ def isodim_tokenizer_ultra(**kwargs) -> IsoDiM_Tokenizer:
     return IsoDiM_Tokenizer(
         output_emb_width=512, down_t=2, stride_t=2, width=512, depth=3,
         dilation_growth_rate=3, activation='relu', norm=None,
-        fsq_levels=get_fsq_config('ultra'),
+        fsq_levels=get_fsq_config('ultra'),  # [8, 8, 8, 8, 5, 5]
         **kwargs
     )
 
 
-def isodim_tokenizer_large(**kwargs) -> IsoDiM_Tokenizer:
-    """Create IsoDiM_Tokenizer with FSQ-Large configuration (48k codebook)."""
+def isodim_tokenizer_mega(**kwargs) -> IsoDiM_Tokenizer:
+    """Create IsoDiM_Tokenizer with FSQ-Mega configuration (164k codebook)."""
     return IsoDiM_Tokenizer(
         output_emb_width=512, down_t=2, stride_t=2, width=512, depth=3,
         dilation_growth_rate=3, activation='relu', norm=None,
-        fsq_levels=get_fsq_config('large'),
+        fsq_levels=get_fsq_config('mega'),  # [8, 8, 8, 8, 8, 5]
+        **kwargs
+    )
+
+
+def isodim_tokenizer_highdim7(**kwargs) -> IsoDiM_Tokenizer:
+    """Create IsoDiM_Tokenizer with FSQ-HighDim7 configuration (109k codebook, dim=7)."""
+    return IsoDiM_Tokenizer(
+        output_emb_width=512, down_t=2, stride_t=2, width=512, depth=3,
+        dilation_growth_rate=3, activation='relu', norm=None,
+        fsq_levels=get_fsq_config('highdim7'),  # [7, 5, 5, 5, 5, 5, 5]
+        **kwargs
+    )
+
+
+def isodim_tokenizer_highdim8(**kwargs) -> IsoDiM_Tokenizer:
+    """Create IsoDiM_Tokenizer with FSQ-HighDim8 configuration (391k codebook, dim=8)."""
+    return IsoDiM_Tokenizer(
+        output_emb_width=512, down_t=2, stride_t=2, width=512, depth=3,
+        dilation_growth_rate=3, activation='relu', norm=None,
+        fsq_levels=get_fsq_config('highdim8'),  # [5, 5, 5, 5, 5, 5, 5, 5]
         **kwargs
     )
 
 
 # Model registry
 Tokenizer_models = {
-    'IsoDiM_Tokenizer_High': isodim_tokenizer_high,
-    'IsoDiM_Tokenizer_Ultra': isodim_tokenizer_ultra,
-    'IsoDiM_Tokenizer_Large': isodim_tokenizer_large,
+    # Standard configurations
+    'IsoDiM_Tokenizer_Small': isodim_tokenizer_small,      # 3,125 codes (快速测试)
+    'IsoDiM_Tokenizer_Medium': isodim_tokenizer_medium,    # 5,000 codes
+    'IsoDiM_Tokenizer_Large': isodim_tokenizer_large,      # 36,000 codes
+    'IsoDiM_Tokenizer_High': isodim_tokenizer_high,        # 64,000 codes (RECOMMENDED)
+    'IsoDiM_Tokenizer_Ultra': isodim_tokenizer_ultra,      # 102,400 codes
+    'IsoDiM_Tokenizer_Mega': isodim_tokenizer_mega,        # 163,840 codes
+    # High-dimensional configurations
+    'IsoDiM_Tokenizer_HighDim7': isodim_tokenizer_highdim7,  # 109,375 codes, dim=7
+    'IsoDiM_Tokenizer_HighDim8': isodim_tokenizer_highdim8,  # 390,625 codes, dim=8
 }
 
