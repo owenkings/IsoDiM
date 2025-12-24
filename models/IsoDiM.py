@@ -330,59 +330,76 @@ class IsoDiM(nn.Module):
         """
         Forward pass with Classifier-Free Guidance.
         
+        保留并行计算逻辑（速度快），使用 torch.where 做安全赋值。
+        
         Args:
-            latents: Input latents [B, L, d]
-            cond_vector: Condition embedding [B, clip_dim]
-            padding_mask: Padding mask
+            latents: Input latents [B, L, fsq_dim]
+            cond_vector: Condition embedding [B, latent_dim]
+            padding_mask: Padding mask [B, L]
             cfg: CFG scale
-            mask: Token mask
+            mask: Token mask [B, L] - True 表示需要预测的位置
             force_mask: Force unconditional
             hard_pseudo_reorder: Use hard pseudo reorder
             
         Returns:
-            CFG-guided predictions [B, L, d]
+            CFG-guided predictions [B, L, fsq_dim]
         """
+        b, l, _ = latents.shape
+        
+        # Handle hard pseudo reorder
         if hard_pseudo_reorder:
-            reorder_mask = mask.clone()
+            reorder_mask = mask.clone() if mask is not None else None
         else:
             reorder_mask = None
         
+        # Force mask 模式：直接返回 unconditional 输出
         if force_mask:
             return self.forward(latents, cond_vector, padding_mask, force_mask=True, mask=reorder_mask)
         
-        logits = self.forward(latents, cond_vector, padding_mask, mask=reorder_mask)
-        
+        # =====================================================================
+        # Step 1: 并行 MAR Forward (速度快)
+        # =====================================================================
         if cfg != 1:
+            # 构造 CFG 输入：[Conditional; Unconditional] -> [2B, L, D]
+            logits = self.forward(latents, cond_vector, padding_mask, mask=reorder_mask)
             aux_logits = self.forward(latents, cond_vector, padding_mask, force_mask=True, mask=reorder_mask)
-            mixed_logits = torch.cat([logits, aux_logits], dim=0)
+            mixed_logits = torch.cat([logits, aux_logits], dim=0)  # [2B, L, latent_dim]
         else:
-            mixed_logits = logits
+            mixed_logits = self.forward(latents, cond_vector, padding_mask, mask=reorder_mask)
         
-        b, l, d = mixed_logits.size()
+        # =====================================================================
+        # Step 2: Diffusion Sampling (保持完整序列，避免 chunk 不均匀问题)
+        # =====================================================================
+        total_b, seq_l, latent_d = mixed_logits.size()
         
-        if mask is not None:
-            mask2 = torch.cat([mask, mask], dim=0).reshape(b * l)
-            mixed_logits = (mixed_logits.reshape(b * l, d))[mask2]
-        else:
-            mixed_logits = mixed_logits.reshape(b * l, d)
+        # Reshape: [B*L, latent_dim] 或 [2B*L, latent_dim]
+        mixed_logits_flat = mixed_logits.reshape(total_b * seq_l, latent_d)
         
-        # Sample from diffusion
-        output = self.DiffTransformer.sample(z=mixed_logits, cfg_scale=cfg)
+        # DiffTransformer.sample 内部处理 CFG
+        # Input:  [2B*L, latent_dim] when cfg != 1, else [B*L, latent_dim]
+        # Output: [B*L, fsq_dim] (只返回 conditional 部分)
+        output = self.DiffTransformer.sample(z=mixed_logits_flat, cfg_scale=cfg)
         
-        if cfg != 1:
-            scaled_logits, _ = output.chunk(2, dim=0)
-        else:
-            scaled_logits = output
+        # Reshape back: [B, L, fsq_dim]
+        scaled_logits = output.reshape(b, seq_l, self.fsq_dim)
         
-        # Grid snapping
+        # =====================================================================
+        # Step 3: FSQ Grid Snapping
+        # =====================================================================
         scaled_logits = self.snap_to_fsq_grid(scaled_logits)
         
+        # =====================================================================
+        # Step 4: 安全赋值 (使用 torch.where，更安全)
+        # =====================================================================
         if mask is not None:
-            latents = latents.reshape(b // 2 * l, self.fsq_dim)
-            latents[mask.reshape(b // 2 * l)] = scaled_logits
-            scaled_logits = latents.reshape(b // 2, l, self.fsq_dim)
+            # mask: [B, L] -> [B, L, 1]
+            mask_expanded = mask.unsqueeze(-1)
+            # 如果 mask=True，取预测值；如果 mask=False，保留原始 latents
+            output = torch.where(mask_expanded, scaled_logits, latents)
+        else:
+            output = scaled_logits
         
-        return scaled_logits
+        return output
     
     @torch.no_grad()
     @eval_decorator

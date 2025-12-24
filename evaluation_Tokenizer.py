@@ -151,7 +151,8 @@ if __name__ == "__main__":
     parser.add_argument('--name', type=str, default='IsoDiM_Tokenizer_High',
                         help='Tokenizer checkpoint name')
     parser.add_argument('--model', type=str, default='IsoDiM_Tokenizer_High',
-                        choices=['IsoDiM_Tokenizer_High', 'IsoDiM_Tokenizer_Ultra', 'IsoDiM_Tokenizer_Large'],
+                        choices=['IsoDiM_Tokenizer_Small','IsoDiM_Tokenizer_Medium','IsoDiM_Tokenizer_Large','IsoDiM_Tokenizer_High',
+                        'IsoDiM_Tokenizer_Ultra','IsoDiM_Tokenizer_Mega','IsoDiM_Tokenizer_HighDim8'],
                         help='Tokenizer model variant')
     
     # Data configuration
