@@ -64,7 +64,7 @@ python sample.py \
     --name IsoDiM \
     --tokenizer_name IsoDiM_Tokenizer_High \
     --model IsoDiM-DiT-XL \
-    --text_prompt "a person walks forward and waves" \
+    --text_prompt "A person waves with both arms above head." \
     --motion_length 120
 ```
 

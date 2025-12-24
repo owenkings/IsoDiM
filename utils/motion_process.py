@@ -273,6 +273,43 @@ def plot_3d_motion(
         ax.set_zticklabels([])
     
     ani = FuncAnimation(fig, update, frames=frame_number, interval=1000 / fps, repeat=False)
-    ani.save(save_path, fps=fps)
+
+    # Try different video encoding approaches
+    save_success = False
+
+    # First try: save as GIF (most reliable)
+    try:
+        gif_path = save_path.replace('.mp4', '.gif')
+        from matplotlib.animation import PillowWriter
+        writer = PillowWriter(fps=fps)
+        ani.save(gif_path, writer=writer)
+        print(f"Video saved as GIF: {gif_path}")
+        save_success = True
+    except Exception as e_gif:
+        print(f"GIF attempt failed: {e_gif}")
+
+    # Second try: save as MP4 if GIF failed
+    if not save_success:
+        try:
+            from matplotlib.animation import FFMpegWriter
+            writer = FFMpegWriter(fps=fps, codec='libopenh264', bitrate=1800)
+            ani.save(save_path, writer=writer)
+            print(f"Video saved as MP4: {save_path}")
+            save_success = True
+        except Exception as e_mp4:
+            print(f"MP4 attempt failed: {e_mp4}")
+
+    # Final fallback: try default ffmpeg save
+    if not save_success:
+        try:
+            ani.save(save_path, fps=fps, writer='ffmpeg')
+            print(f"Video saved with default method: {save_path}")
+            save_success = True
+        except Exception as e_default:
+            print(f"All video saving attempts failed: {e_default}")
+
+    if not save_success:
+        raise RuntimeError("Could not save video with any available method")
+
     plt.close()
 

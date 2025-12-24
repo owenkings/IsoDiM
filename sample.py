@@ -71,33 +71,43 @@ def main(args):
         cond_mode='text',
         fsq_levels=tokenizer.fsq_levels,
     )
-    ckpt_path = pjoin(model_dir, 'latest.tar')
+    ckpt_path = pjoin(model_dir, 'net_best_fid.tar')
     checkpoint = torch.load(ckpt_path, map_location='cpu')
     missing_keys, unexpected_keys = ema_isodim.load_state_dict(checkpoint['ema_isodim'], strict=False)
     assert len(unexpected_keys) == 0
     assert all([k.startswith('clip_model.') for k in missing_keys])
     
     # Load length estimator
-    length_estimator = LengthEstimator(512, 50)
-    ckpt = torch.load(
-        pjoin(args.checkpoints_dir, args.dataset_name, 'length_estimator', 'model', 'finest.tar'),
-        map_location='cpu'
-    )
-    length_estimator.load_state_dict(ckpt['estimator'])
+    length_estimator = None
+    try:
+        length_estimator = LengthEstimator(512, 50)
+        ckpt = torch.load(
+            pjoin(args.checkpoints_dir, args.dataset_name, 'length_estimator', 'model', 'finest.tar'),
+            map_location='cpu'
+        )
+        length_estimator.load_state_dict(ckpt['estimator'])
+        print("Length estimator loaded successfully.")
+    except FileNotFoundError:
+        print("Length estimator model not found, using fixed length instead.")
+        length_estimator = None
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
+
     # =========================================================================
     # Prompt Processing
     # =========================================================================
     prompt_list = []
     length_list = []
     est_length = False
-    
+
     if args.text_prompt != "":
         prompt_list.append(args.text_prompt)
         if args.motion_length == 0:
-            est_length = True
+            if length_estimator is not None:
+                est_length = True
+            else:
+                print("No length estimator available, using default length 120.")
+                length_list.append(120)
         else:
             length_list.append(args.motion_length)
     elif args.text_path != "":
@@ -107,25 +117,30 @@ def main(args):
                 infos = line.split('#')
                 prompt_list.append(infos[0])
                 if len(infos) == 1 or (not infos[1].isdigit()):
-                    est_length = True
-                    length_list = []
+                    if length_estimator is not None:
+                        est_length = True
+                        length_list = []
+                    else:
+                        print("No length estimator available, using default length 120.")
+                        length_list.append(120)
                 else:
                     length_list.append(int(infos[-1]))
     else:
         raise ValueError("A text prompt or a file of text prompts is required!")
-    
+
     # =========================================================================
     # Sampling
     # =========================================================================
     tokenizer.to(device)
     ema_isodim.to(device)
-    length_estimator.to(device)
-    
+    if length_estimator is not None:
+        length_estimator.to(device)
+        length_estimator.eval()
+
     tokenizer.eval()
     ema_isodim.eval()
-    length_estimator.eval()
-    
-    if est_length:
+
+    if est_length and length_estimator is not None:
         print("No motion length specified, using estimated lengths.")
         text_embedding = ema_isodim.encode_text(prompt_list)
         pred_dis = length_estimator(text_embedding)
@@ -170,9 +185,23 @@ def main(args):
             joint_data = joint_data[:m_length[k]]
             joint = recover_from_ric(torch.from_numpy(joint_data).float(), nb_joints).numpy()
             
-            save_path = pjoin(s_path, f"caption:{caption[:50]}_sample{k}_repeat{r}_len{m_length[k]}.mp4")
-            plot_3d_motion(save_path, kinematic_chain, joint, title=caption, fps=20)
+            # Save motion data as numpy array
             np.save(pjoin(s_path, f"caption:{caption[:50]}_sample{k}_repeat{r}_len{m_length[k]}.npy"), joint)
+            print(f"  Motion data saved to: {pjoin(s_path, f'caption:{caption[:50]}_sample{k}_repeat{r}_len{m_length[k]}.npy')}")
+
+            # Try to save video
+            save_path = pjoin(s_path, f"caption:{caption[:50]}_sample{k}_repeat{r}_len{m_length[k]}.mp4")
+            try:
+                plot_3d_motion(save_path, kinematic_chain, joint, title=caption, fps=20)
+                # Check if files actually exist and have content
+                gif_path = save_path.replace('.mp4', '.gif')
+                if os.path.exists(gif_path) and os.path.getsize(gif_path) > 0:
+                    print(f"  Video saved as GIF: {gif_path}")
+                if os.path.exists(save_path) and os.path.getsize(save_path) > 0:
+                    print(f"  Video saved as MP4: {save_path}")
+            except Exception as e:
+                print(f"  Video saving failed: {e}")
+                print("  Motion data is still available as .npy file")
 
 
 if __name__ == "__main__":
@@ -187,7 +216,7 @@ if __name__ == "__main__":
                         choices=['IsoDiM_Tokenizer_High', 'IsoDiM_Tokenizer_Ultra', 'IsoDiM_Tokenizer_Large'],
                         help='Tokenizer model variant')
     parser.add_argument('--model', type=str, default='IsoDiM-DiT-XL',
-                        choices=['IsoDiM-DiT-S', 'IsoDiM-DiT-B', 'IsoDiM-DiT-L', 'IsoDiM-DiT-XL'],
+                        choices=['IsoDiM-DiT-S', 'IsoDiM-DiT-B', 'IsoDiM-DiT-L', 'IsoDiM-DiT-XL','IsoDiM_test_v2'],
                         help='IsoDiM model variant')
     
     # Data configuration
